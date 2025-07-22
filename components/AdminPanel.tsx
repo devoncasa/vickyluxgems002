@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { GEM_DATA, clarityGrades, certifications } from '../data/gem-data';
@@ -222,18 +221,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
     const generateDescription = async () => {
         if (!canGenerateDescription || isGenerating) return;
-        
-        const apiKey = process.env.API_KEY;
-        if (!apiKey) {
-            alert("Error: The API_KEY environment variable is not configured. AI features are disabled.");
-            return;
-        }
-
-        setIsGenerating(true); 
-        setFormData(prev => ({...prev, gemDescription: ''}));
-        
+        if (!process.env.API_KEY) { alert("Error: API_KEY is not configured. AI features are disabled."); return; }
+        setIsGenerating(true); setFormData(prev => ({...prev, gemDescription: ''}));
         try {
-            const ai = new GoogleGenAI({ apiKey: apiKey });
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             let cutString = formData.gemCuts.filter(c => c !== 'Other').join(', ');
             if (formData.gemCutOther) { cutString += (cutString ? ', ' : '') + formData.gemCutOther; }
             
@@ -321,7 +312,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const renderLogin = () => (
         <div className="admin-modal-content admin-login-view" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-body">
-                <img src="https://i.postimg.cc/BZ7Qgx8s/vkluxgem-logo-smll.webp" alt="Vicky LuxGems Logo" className="mx-auto mb-6 w-32"/>
+                <img src="https://i.postimg.cc/qv6dNrbH/vkamber-gems.webp" alt="Vicky LuxGems Logo" className="mx-auto mb-6 w-32"/>
                 <div className="text-center mb-6">
                     <h1 className="text-3xl font-bold font-serif text-[var(--c-heading)]">Vicky LuxGems</h1>
                     <p className="text-md text-[var(--c-text-secondary)] mt-1">Admin Panel</p>

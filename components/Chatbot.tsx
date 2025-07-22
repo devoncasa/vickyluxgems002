@@ -36,13 +36,12 @@ const Chatbot: React.FC = () => {
     useEffect(() => {
         const initChat = async () => {
             try {
-                const apiKey = process.env.API_KEY;
-                if (!apiKey) {
-                    console.error('Error: The API_KEY environment variable is not configured.');
+                if (!process.env.API_KEY) {
+                    console.error('API_KEY not found.');
                     setError(t('chatbot_error_unavailable' as any) as string);
                     return;
                 }
-                const ai = new GoogleGenAI({ apiKey: apiKey });
+                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
                 const newChat = ai.chats.create({
                     model: 'gemini-2.5-flash',
                     config: {
