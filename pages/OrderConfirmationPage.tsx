@@ -69,13 +69,11 @@ Bead Quantity: ${details.beadQuantity} beads
 Est. Weight: ${estimatedTotalWeightInGrams.toFixed(2)}g
 Amulet: ${details.amulet?.name || 'None'}
 Metal Caps: ${details.metal}
-Monk's Blessing: ${details.blessing ? 'Yes' : 'No'}
 ---------------------------------
 Price Breakdown:
 - Beads: ${formatCurrency(breakdown.beadsPrice)}
 - Metal: ${formatCurrency(breakdown.metalPrice)}
 - Amulet: ${formatCurrency(breakdown.amuletPrice)}
-- Blessing: ${formatCurrency(breakdown.blessingPrice)}
 ---------------------------------
 Est. Total Price: ${formatCurrency(breakdown.totalPrice)}
 `.trim().replace(/^\s+/gm, '');
@@ -128,12 +126,6 @@ Est. Total Price: ${formatCurrency(breakdown.totalPrice)}
                          <div className="flex justify-between">
                             <p className="text-[var(--c-text-primary)] opacity-90">Amulet ({details.amulet.name})</p>
                             <p className="font-semibold text-[var(--c-accent-secondary-hover)]">+ {formatCurrency(breakdown.amuletPrice)}</p>
-                        </div>
-                    )}
-                    {breakdown.blessingPrice > 0 && (
-                         <div className="flex justify-between">
-                            <p className="text-[var(--c-text-primary)] opacity-90">Monk's Blessing ✨</p>
-                            <p className="font-semibold text-[var(--c-accent-secondary-hover)]">+ {formatCurrency(breakdown.blessingPrice)}</p>
                         </div>
                     )}
                 </div>

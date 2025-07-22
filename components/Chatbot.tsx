@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI, Chat, GenerateContentResponse } from '@google/genai';
+import { Chat, GenerateContentResponse } from '@google/genai';
 import { ChatBubbleIcon, CloseIcon } from './IconComponents';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useAppContext } from '../context/AppContext';
 
 interface Message {
     sender: 'user' | 'ai';
@@ -10,12 +11,14 @@ interface Message {
 
 const Chatbot: React.FC = () => {
     const { t } = useLanguage();
+    const { gemini } = useAppContext();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [chat, setChat] = useState<Chat | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isInitialized, setIsInitialized] = useState(false);
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     // Initial greeting message
@@ -32,17 +35,18 @@ const Chatbot: React.FC = () => {
         }
     }, [messages]);
 
-    // Initialize chat session
+    // Initialize chat session only when first opened
     useEffect(() => {
-        const initChat = async () => {
+        if (isOpen && !isInitialized) {
+            if (!gemini) {
+                console.warn('Gemini instance not available in context. Chatbot disabled.');
+                setError(t('chatbot_error_unavailable' as any) as string);
+                setIsInitialized(true); // Mark as attempted
+                return;
+            }
+
             try {
-                if (!process.env.API_KEY) {
-                    console.error('API_KEY not found.');
-                    setError(t('chatbot_error_unavailable' as any) as string);
-                    return;
-                }
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-                const newChat = ai.chats.create({
+                const newChat = gemini.chats.create({
                     model: 'gemini-2.5-flash',
                     config: {
                         systemInstruction: t('chatbot_system_prompt' as any) as string,
@@ -53,11 +57,11 @@ const Chatbot: React.FC = () => {
             } catch (err) {
                 console.error("Chat initialization failed:", err);
                 setError(t('chatbot_error_init' as any) as string);
+            } finally {
+                setIsInitialized(true);
             }
-        };
-        
-        initChat();
-    }, [t]);
+        }
+    }, [isOpen, isInitialized, gemini, t]);
 
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
@@ -67,14 +71,8 @@ const Chatbot: React.FC = () => {
         setInput('');
         setIsLoading(true);
         
-        if (error) {
-            setMessages(prev => [...prev, { sender: 'ai', text: error }]);
-            setIsLoading(false);
-            return;
-        }
-
         if (!chat) {
-            setMessages(prev => [...prev, { sender: 'ai', text: t('chatbot_error_connect' as any) as string }]);
+            setMessages(prev => [...prev, { sender: 'ai', text: error || (t('chatbot_error_connect' as any) as string) }]);
             setIsLoading(false);
             return;
         }

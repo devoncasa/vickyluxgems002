@@ -93,7 +93,7 @@ export interface Product {
   // Certification is for all
   certification: {
     isCertified: boolean;
-    authority?: 'GIA' | 'GIT' | 'In-house';
+    authority?: string;
     certificateNumber?: string;
   };
   
@@ -134,7 +134,6 @@ export interface CartItem {
   quantity: BeadQuantity;
   metal: Metal;
   amulet?: Amulet;
-  blessing: boolean;
   totalPrice: number;
 }
 
@@ -185,14 +184,12 @@ export interface CustomPreOrderDetails {
     beadQuantity: BeadQuantity;
     amulet: Amulet | null;
     metal: Metal;
-    blessing: boolean;
 }
 
 export interface PriceBreakdown {
   beadsPrice: number;
   amuletPrice: number;
   metalPrice: number;
-  blessingPrice: number;
   totalPrice: number;
 }
 

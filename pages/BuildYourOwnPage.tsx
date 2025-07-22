@@ -1,8 +1,7 @@
-
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AmberColorDetail, Grade, BeadSize, BeadQuantity, Amulet, Metal, CustomPreOrderDetails, PriceBreakdown } from '../types';
-import { AMBER_COLOR_DETAILS, METAL_PRICES, BLESSING_PRICE, AMULETS, BEAD_SPECS, BACKGROUND_IMAGES } from '../constants';
+import { AMBER_COLOR_DETAILS, METAL_PRICES, AMULETS, BEAD_SPECS, BACKGROUND_IMAGES } from '../constants';
 import GradeSelectionModal from '../components/GradeSelectionModal';
 import SectionDivider from '../components/SectionDivider';
 import BraceletBuilder from '../components/BraceletBuilder';
@@ -24,25 +23,23 @@ const MalaBuilder: React.FC = () => {
     const [beadQuantity, setBeadQuantity] = useState<BeadQuantity>(108);
     const [selectedAmulet, setSelectedAmulet] = useState<Amulet | null>(null);
     const [selectedMetal, setSelectedMetal] = useState<Metal>(Metal.None);
-    const [wantsBlessing, setWantsBlessing] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Price Calculation
     const priceBreakdown = useMemo((): PriceBreakdown => {
-        if (!selectedAmber) return { beadsPrice: 0, amuletPrice: 0, metalPrice: 0, blessingPrice: 0, totalPrice: 0 };
+        if (!selectedAmber) return { beadsPrice: 0, amuletPrice: 0, metalPrice: 0, totalPrice: 0 };
 
         const gradeMultiplier: { [key in Grade]: number } = { 'Standard': 1, 'Silver': 1.5, 'High': 2.5 };
         const beadSpec = BEAD_SPECS.find(s => s.size === beadSize);
-        if (!beadSpec) return { beadsPrice: 0, amuletPrice: 0, metalPrice: 0, blessingPrice: 0, totalPrice: 0 };
+        if (!beadSpec) return { beadsPrice: 0, amuletPrice: 0, metalPrice: 0, totalPrice: 0 };
 
         const beadsPrice = selectedAmber.basePricePerGram * beadSpec.weight * beadQuantity * gradeMultiplier[selectedGrade];
         const amuletPrice = selectedAmulet?.price || 0;
         const metalPrice = METAL_PRICES[selectedMetal];
-        const blessingPrice = wantsBlessing ? BLESSING_PRICE : 0;
-        const totalPrice = beadsPrice + amuletPrice + metalPrice + blessingPrice;
+        const totalPrice = beadsPrice + amuletPrice + metalPrice;
 
-        return { beadsPrice, amuletPrice, metalPrice, blessingPrice, totalPrice };
-    }, [selectedAmber, selectedGrade, beadSize, beadQuantity, selectedAmulet, selectedMetal, wantsBlessing]);
+        return { beadsPrice, amuletPrice, metalPrice, totalPrice };
+    }, [selectedAmber, selectedGrade, beadSize, beadQuantity, selectedAmulet, selectedMetal]);
 
     // Handlers
     const handleColorSelect = (color: AmberColorDetail) => {
@@ -67,7 +64,6 @@ const MalaBuilder: React.FC = () => {
             beadQuantity,
             amulet: selectedAmulet,
             metal: selectedMetal,
-            blessing: wantsBlessing,
         };
         navigate(`/order-confirmation`, { state: { details, breakdown: priceBreakdown } });
     };
@@ -141,12 +137,6 @@ const MalaBuilder: React.FC = () => {
                                 {Object.values(Metal).map(m => <option key={m} value={m}>{m} {METAL_PRICES[m] > 0 ? `(${formatCurrency(METAL_PRICES[m])})` : ''}</option>)}
                             </select>
                         </div>
-                        <div>
-                            <label className="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[var(--c-accent-secondary)]/10">
-                                <input type="checkbox" checked={wantsBlessing} onChange={e => setWantsBlessing(e.target.checked)} className="h-5 w-5 rounded text-[var(--c-accent-secondary)] focus:ring-[var(--c-accent-secondary)] border-[var(--c-border)]"/>
-                                <span className="font-semibold">{t('build_addon_blessing', { price: formatCurrency(BLESSING_PRICE) })}</span>
-                            </label>
-                        </div>
                     </div>
                 </div>
                 {/* Summary */}
@@ -177,7 +167,6 @@ const MalaBuilder: React.FC = () => {
                                 </div>
                                 {priceBreakdown.metalPrice > 0 && <div className="flex justify-between items-center text-sm text-[var(--c-accent-secondary-hover)]"><span className="text-[var(--c-text-secondary)]">{t('build_summary_breakdown_metal')}</span><span className="font-semibold">+ {formatCurrency(priceBreakdown.metalPrice)}</span></div>}
                                 {priceBreakdown.amuletPrice > 0 && <div className="flex justify-between items-center text-sm text-[var(--c-accent-secondary-hover)]"><span className="text-[var(--c-text-secondary)]">{t('build_summary_breakdown_amulet')}</span><span className="font-semibold">+ {formatCurrency(priceBreakdown.amuletPrice)}</span></div>}
-                                {priceBreakdown.blessingPrice > 0 && <div className="flex justify-between items-center text-sm text-[var(--c-accent-secondary-hover)]"><span className="text-[var(--c-text-secondary)]">{t('build_summary_breakdown_blessing')}</span><span className="font-semibold">+ {formatCurrency(priceBreakdown.blessingPrice)}</span></div>}
                             </div>
 
                             <div className="mt-6 pt-4 border-t-2 border-dashed border-[var(--c-heading)]/20">

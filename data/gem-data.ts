@@ -14,16 +14,17 @@ const burmeseAmberColors = [
 
 export const clarityGrades = ["IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "I1", "I2", "I3"];
 export const certifications = [
-    "GIT – Gem and Jewelry Institute of Thailand",
     "AIGS – Asian Institute of Gemological Sciences",
+    "BGL – Bangkok Gemological Laboratory",
+    "DGL – Diamond Grading Laboratory",
     "GIA Bangkok – Gemological Institute of America (Thailand)",
+    "GIT – Gem and Jewelry Institute of Thailand",
     "GRS Thailand – GemResearch Swisslab",
     "Lotus Gemology",
-    "DGL – Diamond Grading Laboratory",
     "NGI – National Gem Institute",
-    "BGL – Bangkok Gemological Laboratory",
+    "SSEF – Swiss Gemmological Institute (via partner labs)",
     "TGL – Thai Gemological Laboratory",
-    "Swiss Gemmological Institute (SSEF)"
+    "Other"
 ];
 
 export const GEM_DATA: GemData = {

@@ -178,7 +178,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount }) => {
                         {/* --- Left Side: Logo --- */}
                         <div className="flex-shrink-0">
                             <Link to="/" className="logo-group flex items-center">
-                                <img src="https://i.postimg.cc/qv6dNrbH/vkamber-gems.webp" alt="VickyLuxGems Logo" className="header-logo"/>
+                                <img src="https://i.postimg.cc/BZ7Qgx8s/vkluxgem-logo-smll.webp" alt="VickyLuxGems Logo" className="header-logo"/>
                             </Link>
                         </div>
 

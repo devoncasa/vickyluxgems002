@@ -80,13 +80,13 @@ const FaqPage: React.FC = () => {
             />
             {faqData.length > 0 && <JsonLd data={faqSchema} />}
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="max-w-3xl mx-auto">
+                <div className="content-page-block max-w-3xl mx-auto p-8 md:p-12 rounded-lg shadow-xl border border-[var(--c-border-muted)]">
                     <div className="text-center mb-12">
                         <h1 className="text-5xl font-bold text-[var(--c-heading)]">{t('nav_FAQs')}</h1>
                         <p className="mt-4 text-xl text-[var(--c-text-secondary)]">Find answers to our most common questions below.</p>
                     </div>
 
-                    <div className="bg-[var(--c-surface)] rounded-lg shadow-lg border border-[var(--c-border)] p-2">
+                    <div className="mt-4">
                         {faqData.length > 0 ? faqData.map((item, index) => (
                             <AccordionItem key={index} title={item.q} id={`faq-${index}`}>
                                 {item.a}

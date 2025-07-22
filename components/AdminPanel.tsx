@@ -12,7 +12,7 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
-    const { products, addProduct, deleteProduct } = useAppContext();
+    const { products, addProduct, deleteProduct, gemini } = useAppContext();
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -24,7 +24,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         gemClarity: '', gemCuts: [] as string[], gemCutOther: '',
         gemCerts: [] as string[], gemCertOther: '',
         gemDimension: '', gemWeight: '', gemWeightUnit: 'carats' as 'carats' | 'grams',
-        gemPrice: '', gemDescription: ''
+        gemPrice: '', gemDescription: '', gemSKU: ''
     };
     const [formData, setFormData] = useState(initialFormData);
 
@@ -114,6 +114,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         
         setFormData({
             ...initialFormData,
+            gemSKU: '',
             gemCategory: newCategory,
             gemType: newGemType,
             gemWeightUnit: newWeightUnit
@@ -145,7 +146,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         const col = (formData.gemColors[0] || 'NOCL').substring(0, 3).toUpperCase();
         const cut = (formData.gemCuts[0] || 'NOCUT').substring(0, 3).toUpperCase();
         const size = formData.gemWeight.replace('.', '');
-        return `${cat}-${mat}-${col}-${cut}-${size}`;
+        return `VLG-${cat}-${mat}-${col}-${cut}-${size}`;
     }, [formData]);
 
     const availableGemTypes = useMemo(() => formData.gemCategory ? Object.keys(GEM_DATA.categories[formData.gemCategory] || {}) : [], [formData.gemCategory]);
@@ -221,10 +222,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
     const generateDescription = async () => {
         if (!canGenerateDescription || isGenerating) return;
-        if (!process.env.API_KEY) { alert("Error: API_KEY is not configured. AI features are disabled."); return; }
+        if (!gemini) {
+             alert("Error: AI features are disabled. Please configure the API key in the environment.");
+             return;
+        }
         setIsGenerating(true); setFormData(prev => ({...prev, gemDescription: ''}));
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             let cutString = formData.gemCuts.filter(c => c !== 'Other').join(', ');
             if (formData.gemCutOther) { cutString += (cutString ? ', ' : '') + formData.gemCutOther; }
             
@@ -233,7 +236,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
             const prompt = `Act as an expert gemologist and luxury copywriter for "VickyLuxGems". Write a compelling, SEO-optimized product description for the following gemstone, under 750 characters. Weave the details into an elegant narrative focusing on beauty, rarity, history, and emotional resonance. Highlight key selling points to convince a customer to buy.
                 - Product Name: ${generatedProductName}
-                - SKU: ${generatedSKU}
+                - SKU: ${formData.gemSKU || generatedSKU}
                 - Type: ${formData.gemType}
                 - Color(s): ${formData.gemColors.join(', ')}
                 - Origin(s): ${formData.gemOrigins.join(', ')}
@@ -245,7 +248,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                 - Certifications: ${certString}
                 Provide only the product description text.`;
             
-            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+            const response = await gemini.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
             setFormData(prev => ({...prev, gemDescription: response.text.trim()}));
         } catch (error) {
             console.error("Gemini API Error:", error);
@@ -262,125 +265,279 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
         return {
             id: `prod_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-            sku: generatedSKU,
+            sku: formData.gemSKU || generatedSKU,
             name: generatedProductName,
             category: formData.gemType.toLowerCase().replace(/\s/g, '-'),
-            material: formData.gemType as Material,
+            material: formData.gemType as Material, // This needs better mapping
             price: Number(formData.gemPrice),
-            isNewArrival: true,
             story: formData.gemDescription,
-            energyProperties: [],
+            energyProperties: ['Clarity', 'Prosperity', 'Protection'], // Placeholder
             media: {
-                mainImageUrl: imagePreviews[0] || `https://placehold.co/600x800/EAE0D5/534B42?text=${encodeURIComponent(formData.gemType)}`,
+                mainImageUrl: imagePreviews[0] || 'https://placehold.co/600x800',
                 gallery: imagePreviews.slice(1),
             },
             specifications: {
                 totalWeight_grams: weightInGrams,
                 origin: formData.gemOrigins.join(', '),
                 clarityLevel: formData.gemClarity,
-                finish: formData.gemCuts.join(', '),
+                finish: [ ...formData.gemCuts.filter(c => c !== 'Other'), formData.gemCutOther ].filter(Boolean).join(', '),
                 dimensions_mm: formData.gemDimension,
             },
-            certification: { isCertified: true, authority: 'In-house', certificateNumber: certString },
+            certification: {
+                isCertified: formData.gemCerts.length > 0,
+                authority: certString || undefined,
+            },
             inventory: { stock: 1, isAvailable: true },
+            isNewArrival: true,
         };
     };
 
     const handlePreview = () => {
         if (!canPreviewProduct) return;
+        setProductToPreview(createProductFromState());
+    };
+    
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!canPreviewProduct) {
+            alert("Please fill all required fields and generate a description before submitting.");
+            return;
+        }
         const newProduct = createProductFromState();
-        setProductToPreview(newProduct);
+        addProduct(newProduct);
+        setShowSuccessNotification(true);
+        setTimeout(() => setShowSuccessNotification(false), 3000);
+        resetForm();
     };
 
-    const handleSaveAndPost = () => {
-        if (productToPreview) {
-            addProduct(productToPreview);
-            setProductToPreview(null);
-            resetForm();
-            setShowSuccessNotification(true);
-            setTimeout(() => setShowSuccessNotification(false), 3000);
+    const handleDelete = (productId: string) => {
+        deleteProduct(productId);
+        setConfirmDeleteId(null);
+    };
+
+    const handleCloseAttempt = () => {
+        if (formIsDirty) {
+            setShowExitConfirm(true);
+        } else {
+            onClose();
         }
     };
-
-    const handleEdit = () => setProductToPreview(null);
-    const handleAttemptExit = () => formIsDirty ? setShowExitConfirm(true) : onClose();
-    const handleConfirmExit = () => { setShowExitConfirm(false); onClose(); };
-    const handleDelete = (productId: string) => { deleteProduct(productId); setConfirmDeleteId(null); };
+    
+    const handleConfirmExit = () => {
+        setShowExitConfirm(false);
+        onClose();
+    };
 
     if (!isOpen) return null;
 
-    const renderLogin = () => (
-        <div className="admin-modal-content admin-login-view" onClick={(e) => e.stopPropagation()}>
-            <div className="admin-modal-body">
-                <img src="https://i.postimg.cc/qv6dNrbH/vkamber-gems.webp" alt="Vicky LuxGems Logo" className="mx-auto mb-6 w-32"/>
-                <div className="text-center mb-6">
-                    <h1 className="text-3xl font-bold font-serif text-[var(--c-heading)]">Vicky LuxGems</h1>
-                    <p className="text-md text-[var(--c-text-secondary)] mt-1">Admin Panel</p>
-                </div>
-                <form onSubmit={handleLogin} className="space-y-6">
-                    <div className="admin-form-field">
-                        <label className="admin-form-field label" htmlFor="password">Password</label>
-                        <input className={`admin-input ${error ? 'border-red-500' : ''}`} type="password" id="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
-                    </div>
-                    {error && <p className="text-red-600 text-sm -mt-4">{error}</p>}
-                    <button type="submit" className="admin-button-primary w-full">Login</button>
-                </form>
-            </div>
-        </div>
-    );
-
-    const renderAddForm = () => (
-         <form onSubmit={(e) => e.preventDefault()} className="space-y-10">
-            <section className="admin-form-section"><h2 className="font-serif">1. Gemstone Classification</h2><div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"><div className="admin-form-field"><label htmlFor="gemCategory">Category</label><select id="gemCategory" name="gemCategory" value={formData.gemCategory} onChange={handleCategoryChange} required className="admin-select"><option value="" disabled>-- Select a Category --</option>{Object.keys(GEM_DATA.categories).map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>{formData.gemCategory && availableGemTypes.length > 1 && <div className="admin-form-field"><label htmlFor="gemType">Gemstone Type</label><select id="gemType" name="gemType" value={formData.gemType} onChange={handleInputChange} required className="admin-select" disabled={!formData.gemCategory}><option value="" disabled>-- Select a Gemstone --</option>{availableGemTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></div>}{generatedProductName && <div className="admin-form-field md:col-span-2"><label>Generated Product Name</label><div className="admin-input bg-gray-100 text-gray-700 p-3 h-auto min-h-[44px] flex items-center">{generatedProductName}</div></div>}{generatedSKU && <div className="admin-form-field md:col-span-2"><label>Generated SKU</label><div className="admin-input bg-gray-100 text-gray-700 p-3 h-auto min-h-[44px] flex items-center font-mono text-sm">{generatedSKU}</div></div>}</div></section>
-            {gemData && <>
-                <section className="admin-form-section"><h2 className="font-serif">2. Gemological Attributes</h2><div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">{formData.gemCategory === "Burmese Amber" ? <div className="admin-form-field"><label htmlFor="gemColors">Color</label><select id="gemColors" name="gemColors" value={formData.gemColors[0] || ''} onChange={(e) => setFormData(p => ({...p, gemColors: [e.target.value]}))} className="admin-select"><option value="" disabled>-- Select Color --</option>{gemData.colors.map(c => <option key={c} value={c}>{c}</option>)}</select></div> : <div className="admin-form-field"><label htmlFor="gemColors">Color(s)</label><select id="gemColors" name="gemColors" multiple value={formData.gemColors} onChange={handleMultiSelectChange} className="admin-select admin-multi-select">{gemData.colors.map(c => <option key={c} value={c}>{c}</option>)}</select></div>}<div className="admin-form-field"><label htmlFor="gemOrigins">Origin(s)</label><select id="gemOrigins" name="gemOrigins" multiple value={formData.gemOrigins} onChange={handleMultiSelectChange} className="admin-select admin-multi-select">{(gemData.origins || GEM_DATA.origins.standard).map(o => <option key={o} value={o}>{o}</option>)}</select></div><div className="admin-form-field"><label htmlFor="gemClarity">Clarity</label><select id="gemClarity" name="gemClarity" value={formData.gemClarity} onChange={handleInputChange} className="admin-select"><option value="" disabled>-- Select Clarity --</option>{clarityGrades.map(c => <option key={c} value={c}>{c}</option>)}</select></div><div className="admin-form-field"><label htmlFor="gemCuts">{formData.gemCategory === "Burmese Amber" ? 'Type / Cut(s)' : 'Cut/Shape(s)'}</label><select id="gemCuts" name="gemCuts" multiple value={formData.gemCuts} onChange={handleMultiSelectChange} className="admin-select admin-multi-select">{availableCuts.map(c => <option key={c} value={c}>{c}</option>)}</select>{formData.gemCuts.includes('Other') && <input className="admin-input mt-4" type="text" name="gemCutOther" value={formData.gemCutOther} onChange={handleInputChange} placeholder="Specify other cut/shape" />}</div><div className="admin-form-field md:col-span-2"><label htmlFor="gemCerts">Certification(s)</label><select id="gemCerts" name="gemCerts" multiple value={formData.gemCerts} onChange={handleMultiSelectChange} className="admin-select admin-multi-select">{certifications.map(c => <option key={c} value={c}>{c}</option>)}<option value="Other">Other</option></select>{formData.gemCerts.includes('Other') && <input className="admin-input mt-4" type="text" name="gemCertOther" value={formData.gemCertOther} onChange={handleInputChange} placeholder="Specify other certification" />}</div></div></section>
-                <section className="admin-form-section"><h2 className="font-serif">3. Core Data & Media</h2><div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"><div className="admin-form-field"><label htmlFor="gemDimension">Dimension (mm)</label><input id="gemDimension" name="gemDimension" type="text" value={formData.gemDimension} onChange={handleDimensionInput} placeholder="e.g., 10x12x12" className="admin-input" /></div><div className="admin-form-field"><label htmlFor="gemPrice">Price (THB)</label><input id="gemPrice" name="gemPrice" type="text" value={formData.gemPrice} onChange={handleNumericInput} placeholder="e.g., 50000" required className="admin-input" /></div><div className="admin-form-field"><label htmlFor="gemWeight">Weight</label><div className="flex gap-2"><input id="gemWeight" name="gemWeight" type="text" value={formData.gemWeight} onChange={handleNumericInput} placeholder="e.g., 5.25" required className="admin-input w-2/3" /><select name="gemWeightUnit" value={formData.gemWeightUnit} onChange={handleInputChange} className="admin-select w-1/3"><option value="carats">carats</option><option value="grams">grams</option></select></div></div><div className="admin-form-field md:col-span-2"><label>Images (Max 5, will be cropped to 3:4)</label><label htmlFor="gem-images-input" className="admin-input text-center cursor-pointer hover:border-[var(--c-accent-primary-hover)]">{uploadedFiles.length > 0 ? `${uploadedFiles.length}/5 files selected` : 'Choose files...'}</label><input id="gem-images-input" type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" /><div className="flex flex-wrap gap-4 mt-4">{imagePreviews.map((src, index) => <div key={index} className="relative w-24 h-32 rounded-lg overflow-hidden border-2 border-[var(--c-border)]"><img src={src} alt={`preview ${index}`} className="w-full h-full object-cover" /><button type="button" onClick={() => removeImage(index)} className="absolute top-1 right-1 w-5 h-5 bg-black/50 text-white rounded-full flex items-center justify-center text-xs font-bold leading-none">&times;</button></div>)}</div></div></div></section>
-                <section className="admin-form-section"><h2 className="font-serif">4. AI-Powered Content</h2>{formData.gemDescription.trim() === '' ? <div className="admin-form-field"><button type="button" onClick={generateDescription} disabled={!canGenerateDescription || isGenerating} className="admin-button-primary w-full flex items-center justify-center">{isGenerating && <span className="loader mr-3"></span>}{isGenerating ? 'Generating...' : 'Generate Description with AI'}</button></div> : <div className="admin-form-field"><label>AI-Generated Description</label><textarea className="admin-textarea" name="gemDescription" rows={10} value={formData.gemDescription} onChange={handleInputChange} ></textarea></div>}{canPreviewProduct && <div className="admin-button-group"><button type="button" onClick={handlePreview} className="admin-button-primary">Preview</button><button type="button" onClick={handleAttemptExit} className="admin-button-primary admin-button-secondary">Exit</button></div>}</section>
-            </>}
-        </form>
-    );
-
-    const renderManageTab = () => (
-        <div><h2 className="admin-form-section font-serif">Manage Existing Inventory</h2><div className="admin-inventory-list">{products.map(product => (<div key={product.id} className="admin-inventory-item"><img src={product.media.mainImageUrl} alt={product.name} className="admin-inventory-item-img" /><span className="admin-inventory-item-name">{product.name}</span><button onClick={() => setConfirmDeleteId(product.id)} className="admin-delete-btn">Delete</button></div>))}</div></div>
-    );
-    
-    const productToDelete = products.find(p => p.id === confirmDeleteId);
-    
-    const renderPreviewModal = () => {
-        if (!productToPreview) return null;
+    if (!isLoggedIn) {
         return (
-            <div className="admin-modal-overlay" onClick={handleEdit}>
-                <div className="admin-modal-content admin-preview-modal" onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-overlay">
+                <div className="admin-modal-content admin-login-view">
                     <div className="admin-modal-body">
-                        <h2 className="text-3xl font-bold font-serif text-center mb-8 text-[var(--c-heading)]">Product Preview</h2>
-                        <div className="max-w-xs mx-auto"><ProductCard product={productToPreview} onAddToCart={() => {}} /></div>
-                        <div className="admin-button-group mt-8"><button onClick={handleEdit} className="admin-button-primary admin-button-secondary">Edit</button><button onClick={handleSaveAndPost} className="admin-button-primary">Save & Post to Shop</button></div>
+                        <h2 className="text-2xl font-bold text-center mb-4">Admin Login</h2>
+                        <form onSubmit={handleLogin}>
+                            <div className="admin-form-field">
+                                <label htmlFor="password">Password</label>
+                                <input type="password" id="password" name="password" value={password} onChange={(e) => setPassword(e.target.value)} className="admin-input" required autoFocus />
+                            </div>
+                            {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+                            <button type="submit" className="admin-button-primary w-full">Login</button>
+                        </form>
                     </div>
                 </div>
             </div>
         );
-    };
+    }
 
     return (
-        <>
-            <div className="admin-modal-overlay" onClick={isLoggedIn ? handleAttemptExit : undefined}>
-                {!isLoggedIn ? renderLogin() : (
-                    <div className="admin-modal-content" onClick={(e) => e.stopPropagation()}>
-                        <button className="admin-modal-close-btn" onClick={handleAttemptExit} aria-label="Close Admin Panel"><CloseIcon className="h-6 w-6" /></button>
-                        <div className="admin-modal-body">
-                            <h1 className="text-4xl font-bold font-serif text-[var(--c-heading)] mb-2">Admin Panel</h1>
-                            <p className="text-lg text-[var(--c-text-secondary)] mb-8">Inventory & Content Management</p>
-                            {showSuccessNotification && (<div className="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 border border-green-200" role="alert"><span className="font-medium">Success!</span> Product has been added to the shop.</div>)}
-                            <div className="flex admin-tabs"><button className={`admin-tab ${activeTab === 'add' ? 'active' : ''}`} onClick={() => setActiveTab('add')}>Add New Gemstone</button><button className={`admin-tab ${activeTab === 'manage' ? 'active' : ''}`} onClick={() => setActiveTab('manage')}>Manage Inventory</button></div>
-                            {activeTab === 'add' ? renderAddForm() : renderManageTab()}
+        <div className="admin-modal-overlay">
+            {showExitConfirm && (
+                <div className="admin-confirm-modal">
+                    <div className="admin-confirm-modal-content">
+                        <h3 className="text-xl font-bold mb-2">Unsaved Changes</h3>
+                        <p className="mb-4">You have unsaved changes. Are you sure you want to exit?</p>
+                        <div className="flex justify-center gap-4">
+                            <button onClick={() => setShowExitConfirm(false)} className="px-6 py-2 rounded-md bg-gray-200">Cancel</button>
+                            <button onClick={handleConfirmExit} className="admin-delete-btn">Exit Anyway</button>
                         </div>
-                        {confirmDeleteId && productToDelete && (<div className="admin-confirm-modal"><div className="admin-confirm-modal-content"><h3 className="text-xl font-bold mb-2 text-[var(--c-heading)]">Confirm Deletion</h3><p className="mb-6 text-[var(--c-text-secondary)]">Are you sure you want to permanently delete "{productToDelete.name}"?</p><div className="flex justify-center gap-4"><button onClick={() => setConfirmDeleteId(null)} className="px-6 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300">Cancel</button><button onClick={() => handleDelete(confirmDeleteId)} className="admin-delete-btn px-6 py-2">Confirm Delete</button></div></div></div>)}
-                        {showExitConfirm && (<div className="admin-confirm-modal"><div className="admin-confirm-modal-content"><h3 className="text-xl font-bold mb-2 text-[var(--c-heading)]">Unsaved Changes</h3><p className="mb-6 text-[var(--c-text-secondary)]">Are you sure you want to exit? Your current progress on this form will be lost.</p><div className="flex justify-center gap-4"><button onClick={() => setShowExitConfirm(false)} className="px-6 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300">Cancel</button><button onClick={handleConfirmExit} className="admin-delete-btn px-6 py-2">Yes, Exit</button></div></div></div>)}
                     </div>
-                )}
+                </div>
+            )}
+            {productToPreview && (
+                <div className="admin-modal-overlay" onClick={() => setProductToPreview(null)}>
+                    <div className="admin-modal-content admin-preview-modal" onClick={e => e.stopPropagation()}>
+                         <button onClick={() => setProductToPreview(null)} className="admin-modal-close-btn" aria-label="Close preview"><CloseIcon className="w-6 h-6"/></button>
+                         <div className="admin-modal-body">
+                            <h2 className="text-2xl font-bold mb-4">Product Card Preview</h2>
+                            <ProductCard product={productToPreview} onAddToCart={() => {}} />
+                         </div>
+                    </div>
+                </div>
+            )}
+            <div className="admin-modal-content">
+                <button onClick={handleCloseAttempt} className="admin-modal-close-btn" aria-label="Close admin panel"><CloseIcon className="w-8 h-8"/></button>
+                <div className="p-6 border-b border-[var(--c-border)]">
+                    <h1 className="text-3xl font-bold text-[var(--c-heading)]">Admin Panel</h1>
+                    <div className="admin-tabs flex items-center mt-4">
+                        <button onClick={() => setActiveTab('add')} className={`admin-tab ${activeTab === 'add' ? 'active' : ''}`}>Add Product</button>
+                        <button onClick={() => setActiveTab('manage')} className={`admin-tab ${activeTab === 'manage' ? 'active' : ''}`}>Manage Inventory</button>
+                    </div>
+                </div>
+
+                <div className="admin-modal-body">
+                    {activeTab === 'add' ? (
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="admin-form-section">
+                                <h2 className="text-xl font-semibold">Category</h2>
+                                <div className="admin-form-field">
+                                    <label htmlFor="gemCategory">Gemstone Category</label>
+                                    <select id="gemCategory" name="gemCategory" value={formData.gemCategory} onChange={handleCategoryChange} className="admin-select" required>
+                                        <option value="">Select a category...</option>
+                                        {Object.keys(GEM_DATA.categories).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div className="admin-form-section">
+                                <h2 className="text-xl font-semibold">Specification</h2>
+                                <div className="admin-form-field">
+                                    <label htmlFor="gemSKU">SKU</label>
+                                    <input type="text" id="gemSKU" name="gemSKU" value={formData.gemSKU} onChange={handleInputChange} className="admin-input" placeholder={generatedSKU} />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="admin-form-field">
+                                        <label htmlFor="gemType">Material</label>
+                                        <select id="gemType" name="gemType" value={formData.gemType} onChange={handleInputChange} className="admin-select" required disabled={availableGemTypes.length === 0}>
+                                            <option value="">Select a material...</option>
+                                            {availableGemTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="admin-form-field">
+                                        <label htmlFor="gemColors">Color (select one or more)</label>
+                                        <select id="gemColors" name="gemColors" multiple value={formData.gemColors} onChange={handleMultiSelectChange} className="admin-select admin-multi-select" required disabled={!gemData}>
+                                            {gemData?.colors.map(color => <option key={color} value={color}>{color}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="admin-form-field">
+                                        <label htmlFor="gemOrigins">Origin (select one or more)</label>
+                                        <select id="gemOrigins" name="gemOrigins" multiple value={formData.gemOrigins} onChange={handleMultiSelectChange} className="admin-select admin-multi-select" disabled={!gemData}>
+                                            {(gemData?.origins || GEM_DATA.origins.standard).map(origin => <option key={origin} value={origin}>{origin}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="admin-form-field">
+                                        <label htmlFor="gemClarity">Clarity</label>
+                                        <select id="gemClarity" name="gemClarity" value={formData.gemClarity} onChange={handleInputChange} className="admin-select">
+                                            <option value="">Select clarity...</option>
+                                            {clarityGrades.map(grade => <option key={grade} value={grade}>{grade}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="admin-form-field">
+                                    <label htmlFor="gemCuts">Finish/Cut (select one or more)</label>
+                                    <select id="gemCuts" name="gemCuts" multiple value={formData.gemCuts} onChange={handleMultiSelectChange} className="admin-select admin-multi-select" disabled={!gemData}>
+                                        {availableCuts.map(cut => <option key={cut} value={cut}>{cut}</option>)}
+                                    </select>
+                                     {formData.gemCuts.includes('Other') && (
+                                        <input type="text" name="gemCutOther" value={formData.gemCutOther} onChange={handleInputChange} className="admin-input mt-2" placeholder="Specify other cut/finish" />
+                                    )}
+                                </div>
+                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div className="admin-form-field">
+                                        <label htmlFor="gemDimension">Dimension (e.g., 10x8x5 mm)</label>
+                                        <input type="text" id="gemDimension" name="gemDimension" value={formData.gemDimension} onChange={handleDimensionInput} className="admin-input" />
+                                    </div>
+                                    <div className="admin-form-field">
+                                        <label htmlFor="gemWeight">Weight</label>
+                                        <div className="flex gap-2">
+                                            <input type="text" id="gemWeight" name="gemWeight" value={formData.gemWeight} onChange={handleNumericInput} className="admin-input" required />
+                                            <select name="gemWeightUnit" value={formData.gemWeightUnit} onChange={handleInputChange} className="admin-select">
+                                                <option value="carats">carats</option>
+                                                <option value="grams">grams</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                 </div>
+                            </div>
+                            
+                            <div className="admin-form-section">
+                                <h2 className="text-xl font-semibold">Pricing, Certification & Media</h2>
+                                <div className="admin-form-field">
+                                    <label htmlFor="gemPrice">Total Price (THB)</label>
+                                    <input type="text" id="gemPrice" name="gemPrice" value={formData.gemPrice} onChange={handleNumericInput} className="admin-input" required />
+                                </div>
+                                <div className="admin-form-field">
+                                    <label htmlFor="gemCerts">Certification (select one or more)</label>
+                                    <select id="gemCerts" name="gemCerts" multiple value={formData.gemCerts} onChange={handleMultiSelectChange} className="admin-select admin-multi-select">
+                                        {certifications.map(cert => <option key={cert} value={cert}>{cert}</option>)}
+                                    </select>
+                                    {formData.gemCerts.includes('Other') && (
+                                        <input type="text" name="gemCertOther" value={formData.gemCertOther} onChange={handleInputChange} className="admin-input mt-2" placeholder="Specify other certification" />
+                                    )}
+                                </div>
+                                <div className="admin-form-field">
+                                    <label>Media (First image is main, max 5)</label>
+                                    <input type="file" onChange={handleImageUpload} multiple accept="image/*" className="admin-input" />
+                                    <div className="mt-4 grid grid-cols-3 sm:grid-cols-5 gap-2">
+                                        {imagePreviews.map((src, index) => (
+                                            <div key={index} className="relative group">
+                                                <img src={src} alt={`Preview ${index}`} className="w-full aspect-[3/4] object-cover rounded-md" />
+                                                <button type="button" onClick={() => removeImage(index)} className="absolute top-1 right-1 bg-red-600/80 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">&times;</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="admin-form-section">
+                                <h2 className="text-xl font-semibold">Description</h2>
+                                <div className="admin-form-field">
+                                    <label htmlFor="gemDescription">Product Story & Description</label>
+                                    <textarea id="gemDescription" name="gemDescription" rows={6} value={formData.gemDescription} onChange={handleInputChange} className="admin-textarea" required></textarea>
+                                    <button type="button" onClick={generateDescription} disabled={!canGenerateDescription || isGenerating} className="admin-button-primary mt-2 disabled:bg-gray-400">
+                                        {isGenerating ? <><span className="loader mr-2"></span> Generating...</> : '✨ Generate with AI'}
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-6 pt-6 border-t border-[var(--c-border)] flex flex-col sm:flex-row gap-4">
+                                <button type="button" onClick={handlePreview} disabled={!canPreviewProduct} className="flex-1 admin-button-primary bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400">Preview</button>
+                                <button type="submit" disabled={!canPreviewProduct} className="flex-1 admin-button-primary">Add Product to Inventory</button>
+                            </div>
+                             {showSuccessNotification && (
+                                <div className="mt-4 p-3 bg-green-100 text-green-800 border border-green-200 rounded-md text-center">Product successfully added!</div>
+                            )}
+                        </form>
+                    ) : (
+                        <div>
+                            {confirmDeleteId && (
+                                <div className="admin-confirm-modal">
+                                    <div className="admin-confirm-modal-content">
+                                        <h3 className="text-xl font-bold mb-2">Confirm Deletion</h3>
+                                        <p className="mb-4">Are you sure you want to delete "{products.find(p => p.id === confirmDeleteId)?.name}"? This action cannot be undone.</p>
+                                        <div className="flex justify-center gap-4">
+                                            <button onClick={() => setConfirmDeleteId(null)} className="px-6 py-2 rounded-md bg-gray-200">Cancel</button>
+                                            <button onClick={() => handleDelete(confirmDeleteId)} className="admin-delete-btn">Delete</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="admin-inventory-list space-y-3">
+                                {products.map(product => (
+                                    <div key={product.id} className="admin-inventory-item">
+                                        <img src={product.media.mainImageUrl} alt={product.name} className="admin-inventory-item-img" />
+                                        <span className="admin-inventory-item-name">{product.name}</span>
+                                        <button onClick={() => setConfirmDeleteId(product.id)} className="admin-delete-btn">Delete</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
-            {renderPreviewModal()}
-        </>
+        </div>
     );
 };
 

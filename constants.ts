@@ -631,8 +631,6 @@ export const METAL_PRICES: { [key in Metal]: number } = {
   [Metal.Brass]: 562,
 };
 
-export const BLESSING_PRICE = 936;
-
 export const MATERIAL_DETAILS: MaterialDetail[] = [
     {
         name: Material.Amber,

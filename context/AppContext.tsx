@@ -1,6 +1,21 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { Product } from '../types';
 import { PRODUCTS } from '../constants';
+import { GoogleGenAI } from '@google/genai';
+
+// Centralized AI instance creation for secure and efficient use of the API key from environment variables.
+const API_KEY = process.env.API_KEY;
+let geminiInstance: GoogleGenAI | null = null;
+
+if (API_KEY) {
+    try {
+        geminiInstance = new GoogleGenAI({ apiKey: API_KEY });
+    } catch (error) {
+        console.error("Failed to initialize GoogleGenAI:", error);
+    }
+} else {
+    console.warn("Vicky LuxGems AI Features Disabled: API_KEY environment variable not set.");
+}
 
 interface AppContextType {
     isAdminPanelOpen: boolean;
@@ -8,6 +23,7 @@ interface AppContextType {
     products: Product[];
     addProduct: (newProduct: Product) => void;
     deleteProduct: (productId: string) => void;
+    gemini: GoogleGenAI | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -30,7 +46,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             setIsAdminPanelOpen,
             products,
             addProduct,
-            deleteProduct
+            deleteProduct,
+            gemini: geminiInstance
         }}>
             {children}
         </AppContext.Provider>

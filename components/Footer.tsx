@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -113,7 +112,7 @@ export const Footer: React.FC = () => {
           <div className="mt-12 pt-8 border-t border-white/10 text-center">
              <button onClick={() => setIsAdminPanelOpen(true)} aria-label="Admin Section" className="cursor-pointer">
               <img 
-                  src="https://i.postimg.cc/qv6dNrbH/vkamber-gems.webp" 
+                  src="https://i.postimg.cc/BZ7Qgx8s/vkluxgem-logo-smll.webp" 
                   alt="VickyLuxGems Logo" 
                   className="h-10 w-auto block mx-auto mb-4"
               />

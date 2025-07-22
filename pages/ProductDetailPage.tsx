@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
-import { BLESSING_PRICE, BEAD_SPECS, SHOP_CATEGORIES, BACKGROUND_IMAGES } from '../constants';
+import { BEAD_SPECS, SHOP_CATEGORIES, BACKGROUND_IMAGES } from '../constants';
 import JsonLd from '../components/JsonLd';
 import SectionDivider from '../components/SectionDivider';
 import { calculateFinalPrice } from '../utils/priceLogic';
@@ -87,7 +87,6 @@ const ProductDetailPage: React.FC = () => {
     const product = products.find(p => p.id === productId);
 
     const [selectedBeadSize, setSelectedBeadSize] = useState<BeadSize | null>(product?.specifications.beadSize_mm || null);
-    const [wantsBlessing, setWantsBlessing] = useState(false);
     const [mainImage, setMainImage] = useState(product?.media.mainImageUrl);
     const [weightUnit, setWeightUnit] = useState<'g' | 'ct'>('g');
     const [addedToCart, setAddedToCart] = useState(false);
@@ -117,15 +116,14 @@ const ProductDetailPage: React.FC = () => {
         if (!product || !selectedBeadSize) return 0;
         
         const sizePrice = product.price; // Start with base price for the default size
-        const blessingPrice = wantsBlessing ? BLESSING_PRICE : 0;
         
         if(product.specifications.beadSize_mm) {
              const dynamicPrice = calculateFinalPrice(product, selectedBeadSize);
-             return dynamicPrice + blessingPrice;
+             return dynamicPrice;
         }
 
-        return sizePrice + blessingPrice;
-    }, [product, selectedBeadSize, wantsBlessing]);
+        return sizePrice;
+    }, [product, selectedBeadSize]);
     
     const selectedBeadSpec = useMemo(() => {
         if (!selectedBeadSize) return null;
@@ -331,20 +329,6 @@ const ProductDetailPage: React.FC = () => {
                             </div>
                         )}
 
-                        <div className="pt-4 border-t border-[var(--c-border)]">
-                            <label className="font-semibold block mb-2 text-[var(--c-heading)]">{t('product_blessing_options')}</label>
-                            <div className="space-y-2">
-                                <label className="flex items-center p-3 border rounded-md cursor-pointer has-[:checked]:bg-[var(--c-accent-secondary)]/20 has-[:checked]:border-[var(--c-accent-secondary-hover)]/50 transition-all">
-                                    <input type="radio" name="blessing" checked={!wantsBlessing} onChange={() => setWantsBlessing(false)} className="h-4 w-4 text-[var(--c-text-secondary)] focus:ring-stone-500" />
-                                    <span className="ms-3 text-sm font-semibold">{t('product_blessing_standard')}</span>
-                                </label>
-                                <label className="flex items-center p-3 border rounded-md cursor-pointer has-[:checked]:bg-[var(--c-accent-secondary)]/20 has-[:checked]:border-[var(--c-accent-secondary-hover)]/50 transition-all">
-                                    <input type="radio" name="blessing" checked={wantsBlessing} onChange={() => setWantsBlessing(true)} className="h-4 w-4 text-[var(--c-accent-secondary-hover)] focus:ring-[var(--c-accent-secondary)]"/>
-                                    <span className="ms-3 text-sm font-semibold">{t('product_blessing_add_monk', { price: BLESSING_PRICE.toLocaleString('en-US')})}</span>
-                                </label>
-                            </div>
-                        </div>
-                        
                         <ProductFaq product={product} />
 
                         <div className="pt-6 border-t border-[var(--c-border)] space-y-4">
