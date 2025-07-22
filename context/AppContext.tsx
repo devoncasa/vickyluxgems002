@@ -4,8 +4,8 @@ import { PRODUCTS } from '../constants';
 import { GoogleGenAI } from '@google/genai';
 
 // Centralized AI instance creation for secure and efficient use of the API key from environment variables.
-// In a Vite environment, client-side environment variables must be prefixed with VITE_ and accessed via import.meta.env.
-const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+// The API key MUST be provided as `process.env.API_KEY` in the execution environment.
+const API_KEY = process.env.API_KEY;
 let geminiInstance: GoogleGenAI | null = null;
 
 if (API_KEY) {
@@ -15,7 +15,7 @@ if (API_KEY) {
         console.error("Failed to initialize GoogleGenAI:", error);
     }
 } else {
-    console.warn("Vicky LuxGems AI Features Disabled: VITE_GEMINI_API_KEY environment variable not set.");
+    console.warn("Vicky LuxGems AI Features Disabled: API_KEY environment variable not set.");
 }
 
 interface AppContextType {
