@@ -56,7 +56,7 @@ const CustomTesbihPage: React.FC = () => {
                              <p className="text-lg text-[var(--c-text-secondary)] max-w-2xl mx-auto mt-4">
                                {t('custom_tesbih_cta_subtitle')}
                              </p>
-                             <Link to="/tesbih-rosary-builder" state={{ defaultTradition: 'Tesbih' }} className="mt-8 inline-block btn-primary btn--intelligent text-white font-bold py-3 px-8 rounded-lg shadow-lg text-lg">
+                             <Link to="/prayer-bead-builder/Tesbih" className="mt-8 inline-block btn-primary btn--intelligent text-white font-bold py-3 px-8 rounded-lg shadow-lg text-lg">
                                 {t('custom_tesbih_cta_button')}
                             </Link>
                         </div>

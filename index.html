@@ -6,6 +6,60 @@
     <meta name="algolia-site-verification"  content="0EE8FC782BF450F3" />
     <title>Vicky LuxGems | Authentic Precious Gems & Timeless Knowledge</title>
     <link rel="icon" type="image/webp" href="https://raw.githubusercontent.com/devoncasa/VickyLuxGems-Assets/refs/heads/main/vkluxgem%20logo%20smll.webp" />
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+    </script>
+    
+    <!-- Geo-detect and apply Consent Mode for EU only -->
+    <script>
+      (async function() {
+        try {
+          const res = await fetch("https://ipapi.co/json/");
+          if (!res.ok) throw new Error('IP API request failed');
+          const data = await res.json();
+          const countryCode = data.country;
+    
+          const EU_COUNTRIES = [
+            "AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU","IE",
+            "IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES","SE","IS",
+            "LI","NO"
+          ];
+    
+          if (EU_COUNTRIES.includes(countryCode)) {
+            gtag('consent', 'default', {
+              'ad_storage': 'denied',
+              'analytics_storage': 'denied',
+              'functionality_storage': 'denied',
+              'personalization_storage': 'denied',
+              'security_storage': 'granted'
+            });
+    
+            console.log("EU visitor detected — consent mode active.");
+          } else {
+            console.log("Non-EU visitor — full tracking allowed.");
+          }
+        } catch (error) {
+            console.error("Geo-detection for consent failed, applying default EU consent mode as a fallback:", error);
+            // Fallback to GDPR-safe defaults if the geo-detection fails
+            gtag('consent', 'default', {
+              'ad_storage': 'denied',
+              'analytics_storage': 'denied',
+              'functionality_storage': 'denied',
+              'personalization_storage': 'denied',
+              'security_storage': 'granted'
+            });
+        } finally {
+            const gaScript = document.createElement('script');
+            gaScript.async = true;
+            gaScript.src = "https://www.googletagmanager.com/gtag/js?id=G-ZFTYRZ90QM";
+            document.head.appendChild(gaScript);
+        
+            gtag('js', new Date());
+            gtag('config', 'G-ZFTYRZ90QM');
+        }
+      })();
+    </script>
     <script type="importmap">
 {
   "imports": {

@@ -15,13 +15,24 @@ const CookieConsentBanner: React.FC = () => {
     const handleConsent = (consent: 'accepted' | 'declined') => {
         localStorage.setItem('cookie_consent', consent);
         setIsVisible(false);
+
+        if (consent === 'accepted') {
+            if (typeof (window as any).gtag === 'function') {
+                (window as any).gtag('consent', 'update', {
+                    'ad_storage': 'granted',
+                    'analytics_storage': 'granted',
+                    'functionality_storage': 'granted',
+                    'personalization_storage': 'granted'
+                });
+            }
+        }
     };
 
     if (!isVisible) {
         return null;
     }
     
-    const privacyPolicyPath = `/#/${lang}/policies/privacy`;
+    const privacyPolicyPath = `/#/policies/privacy`;
 
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-[var(--c-surface)]/95 backdrop-blur-sm border-t border-[var(--c-border)] p-4 shadow-lg z-50 transition-opacity duration-300" role="dialog" aria-labelledby="cookie-consent-title">
