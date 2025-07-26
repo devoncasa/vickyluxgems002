@@ -1,10 +1,43 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { clarityGrades, certifications, GEM_DATA } from '../data/gem-data';
 import { CloseIcon } from './IconComponents';
 import { useAppContext } from '../context/AppContext';
 import { Product, Material } from '../types';
 import ProductCard from './ProductCard';
+
+const categoryCodes: { [key: string]: string } = {
+    "Precious Gemstones": "PR",
+    "Semi-Precious Gemstones": "SP",
+    "Burmese Amber": "AM"
+};
+
+const gemTypeCodes: { [key: string]: string } = {
+    "Ruby": "RU", "Sapphire": "SA", "Emerald": "EM", "Diamond": "DI", "Spinel": "SPN", "Jadeite": "JD",
+    "Agate": "AG", "Alexandrite": "AX", "Aquamarine": "AQ", "Citrine": "CT", "Garnet": "GN", "Lapis Lazuli": "LL",
+    "Morganite": "MG", "Onyx": "ON", "Opal": "OP", "Pearl": "PL", "Peridot": "PD", "Tanzanite": "TA",
+    "Topaz": "TP", "Tourmaline": "TR", "Zircon": "ZC", "Fossil Coral": "FC", "Burmese Amber": "AMB"
+};
+
+const countryCodes: { [key: string]: string } = {
+    "Myanmar": "MY", "Tanzania": "TZ", "Colombia": "CO", "Afghanistan": "AF", "Australia": "AU", "Botswana": "BW",
+    "Brazil": "BR", "Cambodia": "KH", "Canada": "CA", "China": "CN", "Ethiopia": "ET", "Indonesia": "ID",
+    "Kashmir": "KSH", "Kenya": "KE", "Madagascar": "MG", "Mexico": "MX", "Mozambique": "MZ", "Namibia": "NA",
+    "Nigeria": "NG", "Pakistan": "PK", "Philippines": "PH", "Russia": "RU", "South Africa": "ZA", "Sri Lanka": "LK",
+    "Tajikistan": "TJ", "Thailand": "TH", "USA": "US", "Vietnam": "VN", "Zambia": "ZM"
+};
+
+const certAcronyms: { [key: string]: string } = {
+    "GIA Bangkok – Gemological Institute of America (Thailand)": "GIA",
+    "GRS Thailand – GemResearch Swisslab": "GRS",
+    "AIGS – Asian Institute of Gemological Sciences": "AIGS",
+    "Lotus Gemology": "LOTUS"
+};
+
+const getAcronym = (input: string = '', exceptions: { [key: string]: string } = {}): string => {
+    if (!input) return '';
+    if (exceptions[input]) return exceptions[input];
+    return input.split(/[\s-]+/).map(word => word.charAt(0)).join('').toUpperCase();
+};
 
 interface AdminPanelProps {
     isOpen: boolean;
@@ -36,6 +69,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const [showExitConfirm, setShowExitConfirm] = useState(false);
     const [formIsDirty, setFormIsDirty] = useState(false);
     const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+    const runningNumberRef = useRef<string | null>(null);
 
     useEffect(() => {
         if (isOpen && sessionStorage.getItem('vlg-admin-auth') === 'true') {
@@ -66,6 +100,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         setUploadedFiles([]);
         setImagePreviews([]);
         setIsGenerating(false);
+        runningNumberRef.current = null;
     };
 
     const handleLogin = (e: React.FormEvent) => {
@@ -85,6 +120,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleSkuInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        const sanitizedValue = value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+        setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
+    };
+
     const handleMultiSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const { name } = e.target;
         const selected = Array.from(e.target.selectedOptions, option => option.value);
@@ -100,10 +141,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     
     const handleDimensionInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        if (/^[0-9xX.\s]*$/.test(value)) {
+        if (/^[0-9.]*$/.test(value)) {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
+    
+    const formattedDimension = useMemo(() => {
+        if (!formData.gemDimension) return '';
+        return `${formData.gemDimension.replace(/\./g, ' x ')} mm`;
+    }, [formData.gemDimension]);
 
     const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newCategory = e.target.value;
@@ -118,6 +164,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
             gemType: newGemType,
             gemWeightUnit: newWeightUnit
         });
+        runningNumberRef.current = null;
     };
     
     const generatedProductName = useMemo(() => {
@@ -139,14 +186,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         return parts.join(' ').replace(/\s+/g, ' ').trim();
     }, [formData.gemColors, formData.gemType, formData.gemCuts, formData.gemCutOther]);
 
-     const generatedSKU = useMemo(() => {
-        const cat = (formData.gemCategory.substring(0, 3) || 'CAT').toUpperCase();
-        const mat = (formData.gemType.substring(0, 3) || 'MAT').toUpperCase();
-        const col = (formData.gemColors[0] || 'NOCL').substring(0, 3).toUpperCase();
-        const cut = (formData.gemCuts[0] || 'NOCUT').substring(0, 3).toUpperCase();
-        const size = (formData.gemWeight || '0').replace('.', '');
-        return `VLG-${cat}-${mat}-${col}-${cut}-${size}`;
-    }, [formData.gemCategory, formData.gemType, formData.gemColors, formData.gemCuts, formData.gemWeight]);
+    const generatedSKU = useMemo(() => {
+        if (!formData.gemCategory || !formData.gemType) {
+            if (runningNumberRef.current) runningNumberRef.current = null;
+            return 'Fill required fields...';
+        }
+    
+        if (!runningNumberRef.current) {
+            runningNumberRef.current = Math.floor(10000 + Math.random() * 90000).toString();
+        }
+
+        const parts = [];
+        parts.push(categoryCodes[formData.gemCategory]);
+        parts.push(gemTypeCodes[formData.gemType]);
+        if (formData.gemColors.length > 0) parts.push(getAcronym(formData.gemColors[0]));
+        if (formData.gemOrigins.length > 0) parts.push(countryCodes[formData.gemOrigins[0]]);
+        const cutInput = formData.gemCuts.includes('Other') ? formData.gemCutOther : formData.gemCuts[0];
+        if (cutInput) parts.push(getAcronym(cutInput, { "Round": "RD", "Cushion": "CU", "Cabochon": "CB" }));
+        if (formData.gemClarity) parts.push(formData.gemClarity);
+        if (formData.gemDimension) parts.push(formData.gemDimension);
+        if (formData.gemWeight) parts.push(`${formData.gemWeight}${formData.gemWeightUnit === 'grams' ? 'g' : 'ct'}`);
+        const certInput = formData.gemCerts.includes('Other') ? formData.gemCertOther : formData.gemCerts[0];
+        if (certInput) parts.push(getAcronym(certInput, certAcronyms));
+        parts.push(runningNumberRef.current);
+
+        return parts.filter(Boolean).join('-').toUpperCase();
+    }, [formData]);
 
     const availableGemTypes = useMemo(() => formData.gemCategory ? Object.keys(GEM_DATA.categories[formData.gemCategory] || {}) : [], [formData.gemCategory]);
     const gemData = useMemo(() => (formData.gemCategory && formData.gemType) ? GEM_DATA.categories[formData.gemCategory]?.[formData.gemType] || null : null, [formData.gemCategory, formData.gemType]);
@@ -241,7 +306,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                 - Origin(s): ${formData.gemOrigins.join(', ')}
                 - Clarity: ${formData.gemClarity}
                 - Cut/Shape(s): ${cutString}
-                - Dimensions: ${formData.gemDimension || 'Not specified'}
+                - Dimensions: ${formattedDimension || 'Not specified'}
                 - Weight: ${formData.gemWeight} ${formData.gemWeightUnit}
                 - Price: THB ${parseInt(formData.gemPrice).toLocaleString()}
                 - Certifications: ${certString}
@@ -277,7 +342,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
             material: formData.gemType as Material,
             price: Number(formData.gemPrice),
             story: formData.gemDescription,
-            energyProperties: ['Clarity', 'Prosperity', 'Protection'], // Placeholder
+            energyProperties: ['Clarity', 'Prosperity', 'Protection'],
             media: {
                 mainImageUrl: imagePreviews[0] || 'https://placehold.co/600x800',
                 gallery: imagePreviews.slice(1),
@@ -287,7 +352,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                 origin: formData.gemOrigins.join(', '),
                 clarityLevel: formData.gemClarity,
                 finish: [ ...formData.gemCuts.filter(c => c !== 'Other'), formData.gemCutOther ].filter(Boolean).join(', '),
-                dimensions_mm: formData.gemDimension,
+                dimensions_mm: formattedDimension,
             },
             certification: {
                 isCertified: formData.gemCerts.length > 0,
@@ -313,7 +378,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         setShowSuccessNotification(true);
         setProductToPreview(null);
         setTimeout(() => setShowSuccessNotification(false), 3000);
-        resetForm(); // Clears form for next entry
+        resetForm();
     };
 
     const handleDelete = (productId: string) => {
@@ -415,8 +480,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                             <div className="admin-form-section">
                                 <h2>Specification</h2>
                                 <div className="admin-form-field">
-                                    <label htmlFor="gemSKU">SKU (auto-generated if empty)</label>
-                                    <input type="text" id="gemSKU" name="gemSKU" value={formData.gemSKU} onChange={handleInputChange} className="admin-input" placeholder={generatedSKU} />
+                                    <label htmlFor="gemSKU">SKU</label>
+                                    <div className="flex items-center gap-2">
+                                        <input type="text" id="gemSKU" name="gemSKU" value={formData.gemSKU} onChange={handleSkuInputChange} className="admin-input flex-grow" placeholder="Manually enter or generate" />
+                                        <button type="button" onClick={() => setFormData(prev => ({...prev, gemSKU: generatedSKU}))} className="btn-primary btn--compact">Generate</button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">Auto-suggestion: <span className="font-mono">{generatedSKU}</span></p>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="admin-form-field">
@@ -459,8 +528,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                 </div>
                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                      <div className="admin-form-field">
-                                        <label htmlFor="gemDimension">Dimension (e.g., 10x8x5 mm)</label>
+                                        <label htmlFor="gemDimension">Dimension (e.g., 10.12.8)</label>
                                         <input type="text" id="gemDimension" name="gemDimension" value={formData.gemDimension} onChange={handleDimensionInput} className="admin-input" />
+                                        {formattedDimension && (
+                                            <p className="text-xs text-gray-500 mt-1">Formatted: {formattedDimension}</p>
+                                        )}
                                     </div>
                                     <div className="admin-form-field">
                                         <label htmlFor="gemWeight">Weight</label>

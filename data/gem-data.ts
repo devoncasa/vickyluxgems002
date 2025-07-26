@@ -30,8 +30,8 @@ export const certifications = [
 export const GEM_DATA: GemData = {
   cuts: {
     standard: [
-      "Asscher", "Cabochon", "Cushion", "Emerald", "Heart", "Marquise", 
-      "Oval", "Pear", "Princess", "Radiant", "Round", "Trillion"
+      "Asscher", "Baguette", "Cabochon", "Cushion", "Emerald", "Heart", "Marquise", 
+      "Oval", "Pear", "Princess", "Radiant", "Rose Cut", "Round", "Step Cut", "Trillion"
     ],
     jade: [
       "Bangle", "Bead", "Buddha", "Carving", "Coin", "Donut", "Drop", 
@@ -40,8 +40,8 @@ export const GEM_DATA: GemData = {
   },
   origins: {
     standard: [
-      "Afghanistan", "Australia", "Botswana", "Brazil", "Cambodia", "Canada", "China", "Colombia", "Indonesia", "Kashmir", "Kenya", "Madagascar", "Mozambique", 
-      "Myanmar", "Nigeria", "Pakistan", "Russia", "South Africa", "Sri Lanka", 
+      "Afghanistan", "Australia", "Botswana", "Brazil", "Cambodia", "Canada", "China", "Colombia", "Ethiopia", "Indonesia", "Kashmir", "Kenya", "Madagascar", "Mexico", "Mozambique", 
+      "Myanmar", "Namibia", "Nigeria", "Pakistan", "Philippines", "Russia", "South Africa", "Sri Lanka", 
       "Tajikistan", "Tanzania", "Thailand", "USA", "Vietnam", "Zambia"
     ],
   },
@@ -77,7 +77,62 @@ export const GEM_DATA: GemData = {
         "Agate": {
             colors: ["Banded", "Blue Lace", "Botswana", "Dendritic", "Fire", "Moss", "White"],
         },
-         "Fossil Coral": {
+        "Alexandrite": {
+            colors: ["Bluish Green (Daylight)", "Purplish Red (Incandescent)"],
+            origins: ["Russia", "Sri Lanka", "Brazil", "Tanzania"]
+        },
+        "Aquamarine": {
+            colors: ["Light Blue", "Greenish Blue", "Sky Blue", "Santa Maria Blue"],
+            origins: ["Brazil", "Nigeria", "Madagascar", "Pakistan"]
+        },
+        "Citrine": {
+            colors: ["Light Yellow", "Golden Yellow", "Madeira Red", "Orange-Brown"],
+            origins: ["Brazil", "Madagascar", "Russia", "USA"]
+        },
+        "Garnet": {
+            colors: ["Red (Almandine, Pyrope)", "Green (Tsavorite, Demantoid)", "Orange (Spessartite)", "Pink/Purple (Rhodolite)", "Color-Change"],
+            origins: ["Tanzania", "Namibia", "Sri Lanka", "Russia", "USA"]
+        },
+        "Lapis Lazuli": {
+            colors: ["Deep Blue", "Royal Blue (with Pyrite)", "Greenish Blue"],
+            origins: ["Afghanistan", "Chile", "Russia"]
+        },
+        "Morganite": {
+            colors: ["Pink", "Peach", "Salmon", "Magenta"],
+            origins: ["Brazil", "Madagascar", "Afghanistan", "USA"]
+        },
+        "Onyx": {
+            colors: ["Black", "Banded (White/Black)", "Sardonyx (Red/White)"]
+        },
+        "Opal": {
+            colors: ["White", "Black", "Fire", "Boulder", "Crystal", "Water"],
+            origins: ["Australia", "Ethiopia", "Mexico", "Brazil"]
+        },
+        "Pearl": {
+            colors: ["White", "Cream", "Pink", "Black (Tahitian)", "Golden (South Sea)", "Blue (Akoya)"],
+            origins: ["Japan", "Australia", "Tahiti", "China", "Philippines"]
+        },
+        "Peridot": {
+            colors: ["Olive Green", "Lime Green", "Yellowish Green"],
+            origins: ["Myanmar", "Pakistan", "USA", "China"]
+        },
+        "Tanzanite": {
+            colors: ["Violetish Blue", "Bluish Violet", "Deep Blue"],
+            origins: ["Tanzania"]
+        },
+        "Topaz": {
+            colors: ["Blue", "Yellow", "Pink", "Sherry", "Colorless (White)", "Imperial", "Mystic"],
+            origins: ["Brazil", "Pakistan", "Russia", "USA"]
+        },
+        "Tourmaline": {
+            colors: ["Pink (Rubellite)", "Green (Verdelite)", "Blue (Indicolite)", "Watermelon", "Black (Schorl)", "Paraíba"],
+            origins: ["Brazil", "Nigeria", "Afghanistan", "USA", "Mozambique"]
+        },
+        "Zircon": {
+            colors: ["Blue", "Red", "Brown", "Green", "Colorless (White)", "Yellow"],
+            origins: ["Cambodia", "Sri Lanka", "Thailand", "Myanmar"]
+        },
+        "Fossil Coral": {
             colors: ["Patterned White", "Patterned Pink", "Patterned Brown"],
             cuts: ["Sphere", "Slab", "Cabochon", "Carving"],
             origins: ["Indonesia", "USA"]
